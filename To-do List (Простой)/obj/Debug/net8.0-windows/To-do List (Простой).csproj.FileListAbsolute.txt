@@ -1,0 +1,16 @@
+C:\Users\Denis\source\repos\To-do List (Простой)\To-do List (Простой)\bin\Debug\net8.0-windows\To-do List (Простой).exe
+C:\Users\Denis\source\repos\To-do List (Простой)\To-do List (Простой)\bin\Debug\net8.0-windows\To-do List (Простой).deps.json
+C:\Users\Denis\source\repos\To-do List (Простой)\To-do List (Простой)\bin\Debug\net8.0-windows\To-do List (Простой).runtimeconfig.json
+C:\Users\Denis\source\repos\To-do List (Простой)\To-do List (Простой)\bin\Debug\net8.0-windows\To-do List (Простой).dll
+C:\Users\Denis\source\repos\To-do List (Простой)\To-do List (Простой)\bin\Debug\net8.0-windows\To-do List (Простой).pdb
+C:\Users\Denis\source\repos\To-do List (Простой)\To-do List (Простой)\obj\Debug\net8.0-windows\To-do List (Простой).csproj.GenerateResource.cache
+C:\Users\Denis\source\repos\To-do List (Простой)\To-do List (Простой)\obj\Debug\net8.0-windows\To-do List (Простой).GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Denis\source\repos\To-do List (Простой)\To-do List (Простой)\obj\Debug\net8.0-windows\To-do List (Простой).AssemblyInfoInputs.cache
+C:\Users\Denis\source\repos\To-do List (Простой)\To-do List (Простой)\obj\Debug\net8.0-windows\To-do List (Простой).AssemblyInfo.cs
+C:\Users\Denis\source\repos\To-do List (Простой)\To-do List (Простой)\obj\Debug\net8.0-windows\To-do List (Простой).csproj.CoreCompileInputs.cache
+C:\Users\Denis\source\repos\To-do List (Простой)\To-do List (Простой)\obj\Debug\net8.0-windows\To-do List (Простой).dll
+C:\Users\Denis\source\repos\To-do List (Простой)\To-do List (Простой)\obj\Debug\net8.0-windows\refint\To-do List (Простой).dll
+C:\Users\Denis\source\repos\To-do List (Простой)\To-do List (Простой)\obj\Debug\net8.0-windows\To-do List (Простой).pdb
+C:\Users\Denis\source\repos\To-do List (Простой)\To-do List (Простой)\obj\Debug\net8.0-windows\To-do List (Простой).genruntimeconfig.cache
+C:\Users\Denis\source\repos\To-do List (Простой)\To-do List (Простой)\obj\Debug\net8.0-windows\ref\To-do List (Простой).dll
+C:\Users\Denis\source\repos\To-do List (Простой)\To-do List (Простой)\obj\Debug\net8.0-windows\To_do_List__Простой_.Form1.resources
