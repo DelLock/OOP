@@ -1,4 +1,5 @@
-﻿using System.Drawing;
+﻿using System;
+using System.Drawing;
 using System.Drawing.Imaging;
 
 namespace ImageEditor
@@ -94,14 +95,14 @@ namespace ImageEditor
 
         public static Bitmap RotateImage(Bitmap image, float angle)
         {
-            Bitmap rotated = new Bitmap(image.Height, image.Width);
+            Bitmap rotated = new Bitmap(image.Width, image.Height);
 
             using (Graphics g = Graphics.FromImage(rotated))
             {
-                g.TranslateTransform(rotated.Width / 2, rotated.Height / 2);
+                g.TranslateTransform(image.Width / 2, image.Height / 2);
                 g.RotateTransform(angle);
                 g.TranslateTransform(-image.Width / 2, -image.Height / 2);
-                g.DrawImage(image, Point.Empty);
+                g.DrawImage(image, new Point(0, 0));
             }
 
             return rotated;

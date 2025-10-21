@@ -21,6 +21,11 @@ namespace ImageEditor
         private Rectangle cropRectangle;
         private bool isCropping;
         private string currentTool;
+        private bool isEraser;
+        private float zoomFactor = 1.0f;
+        private Point panOffset = Point.Empty;
+        private bool isPanning;
+        private Point panStart;
 
         public Form1()
         {
@@ -35,22 +40,25 @@ namespace ImageEditor
             drawingColor = Color.Black;
             penWidth = 3;
             currentTool = "Pencil";
+            isEraser = false;
+            zoomFactor = 1.0f;
+            panOffset = Point.Empty;
+
+            pictureBox1.SizeMode = PictureBoxSizeMode.AutoSize;
 
             KeyPreview = true;
             KeyDown += MainForm_KeyDown;
+
+            UpdateStatusBar();
         }
 
-
-        private void Redo_Click(object sender, EventArgs e)
+        private void UpdateStatusBar()
         {
-            if (redoStack.Count > 0)
-            {
-                undoStack.Push(new Bitmap(currentImage));
-                currentImage = redoStack.Pop();
-                pictureBox1.Image = currentImage;
-                pictureBox1.Invalidate();
-            }
+            string toolStatus = isEraser ? "Eraser" : "Pencil";
+            string zoomStatus = $"Zoom: {(zoomFactor * 100):F0}%";
+            toolStripStatusLabel1.Text = $"{toolStatus} | {zoomStatus} | Pen: {penWidth}px";
         }
+
         private void SaveCurrentState()
         {
             if (currentImage != null)
@@ -69,19 +77,31 @@ namespace ImageEditor
                 g.Clear(Color.White);
             }
             originalImage = new Bitmap(currentImage);
-            pictureBox1.Image = currentImage;
-            pictureBox1.Invalidate();
+            zoomFactor = 1.0f;
+            panOffset = Point.Empty;
+            UpdateImageDisplay();
+            UpdateStatusBar();
         }
 
         private void OpenFile_Click(object sender, EventArgs e)
         {
             if (openFileDialog1.ShowDialog() == DialogResult.OK)
             {
-                SaveCurrentState();
-                currentImage = new Bitmap(openFileDialog1.FileName);
-                originalImage = new Bitmap(currentImage);
-                pictureBox1.Image = currentImage;
-                pictureBox1.Size = currentImage.Size;
+                try
+                {
+                    SaveCurrentState();
+                    currentImage = new Bitmap(openFileDialog1.FileName);
+                    originalImage = new Bitmap(currentImage);
+                    zoomFactor = 1.0f;
+                    panOffset = Point.Empty;
+                    UpdateImageDisplay();
+                    UpdateStatusBar();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error loading image: {ex.Message}", "Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
 
@@ -91,19 +111,27 @@ namespace ImageEditor
 
             if (saveFileDialog1.ShowDialog() == DialogResult.OK)
             {
-                ImageFormat format = ImageFormat.Png;
-                switch (Path.GetExtension(saveFileDialog1.FileName).ToLower())
+                try
                 {
-                    case ".jpg":
-                    case ".jpeg":
-                        format = ImageFormat.Jpeg;
-                        break;
-                    case ".bmp":
-                        format = ImageFormat.Bmp;
-                        break;
-                }
+                    ImageFormat format = ImageFormat.Png;
+                    switch (Path.GetExtension(saveFileDialog1.FileName).ToLower())
+                    {
+                        case ".jpg":
+                        case ".jpeg":
+                            format = ImageFormat.Jpeg;
+                            break;
+                        case ".bmp":
+                            format = ImageFormat.Bmp;
+                            break;
+                    }
 
-                currentImage.Save(saveFileDialog1.FileName, format);
+                    currentImage.Save(saveFileDialog1.FileName, format);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error saving image: {ex.Message}", "Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
 
@@ -118,8 +146,19 @@ namespace ImageEditor
             {
                 redoStack.Push(new Bitmap(currentImage));
                 currentImage = undoStack.Pop();
-                pictureBox1.Image = currentImage;
-                pictureBox1.Invalidate();
+                UpdateImageDisplay();
+                UpdateStatusBar();
+            }
+        }
+
+        private void Redo_Click(object sender, EventArgs e)
+        {
+            if (redoStack.Count > 0)
+            {
+                undoStack.Push(new Bitmap(currentImage));
+                currentImage = redoStack.Pop();
+                UpdateImageDisplay();
+                UpdateStatusBar();
             }
         }
 
@@ -129,18 +168,11 @@ namespace ImageEditor
 
             SaveCurrentState();
 
-            Bitmap rotated = new Bitmap(currentImage.Height, currentImage.Width);
-            using (Graphics g = Graphics.FromImage(rotated))
-            {
-                g.TranslateTransform(rotated.Width / 2, rotated.Height / 2);
-                g.RotateTransform(angle);
-                g.TranslateTransform(-currentImage.Width / 2, -currentImage.Height / 2);
-                g.DrawImage(currentImage, Point.Empty);
-            }
-
+            Bitmap rotated = ImageProcessor.RotateImage(currentImage, angle);
             currentImage = rotated;
-            pictureBox1.Image = currentImage;
-            pictureBox1.Size = currentImage.Size;
+            zoomFactor = 1.0f;
+            panOffset = Point.Empty;
+            UpdateImageDisplay();
         }
 
         private void Rotate90_Click(object sender, EventArgs e)
@@ -166,38 +198,13 @@ namespace ImageEditor
             if (isCropping)
             {
                 currentTool = "Crop";
+                isEraser = false;
             }
             else
             {
                 currentTool = "Pencil";
             }
-        }
-
-        private void ApplyBrightness(int brightness)
-        {
-            if (currentImage == null) return;
-
-            Bitmap tempImage = new Bitmap(currentImage);
-            BitmapData bmpData = tempImage.LockBits(new Rectangle(0, 0, tempImage.Width, tempImage.Height),
-                                                   ImageLockMode.ReadWrite, tempImage.PixelFormat);
-
-            IntPtr ptr = bmpData.Scan0;
-            int bytes = Math.Abs(bmpData.Stride) * tempImage.Height;
-            byte[] rgbValues = new byte[bytes];
-
-            System.Runtime.InteropServices.Marshal.Copy(ptr, rgbValues, 0, bytes);
-
-            for (int counter = 0; counter < rgbValues.Length; counter++)
-            {
-                int value = rgbValues[counter] + brightness;
-                rgbValues[counter] = (byte)Math.Max(0, Math.Min(255, value));
-            }
-
-            System.Runtime.InteropServices.Marshal.Copy(rgbValues, 0, ptr, bytes);
-            tempImage.UnlockBits(bmpData);
-
-            currentImage = tempImage;
-            pictureBox1.Image = currentImage;
+            UpdateStatusBar();
         }
 
         private void BrightnessFilter_Click(object sender, EventArgs e)
@@ -209,46 +216,10 @@ namespace ImageEditor
                 if (dialog.ShowDialog() == DialogResult.OK)
                 {
                     SaveCurrentState();
-                    ApplyBrightness(dialog.BrightnessValue);
+                    currentImage = ImageProcessor.ApplyBrightness(currentImage, dialog.BrightnessValue);
+                    UpdateImageDisplay();
                 }
             }
-        }
-
-        private void ApplyBlur()
-        {
-            if (currentImage == null) return;
-
-            Bitmap blurred = new Bitmap(currentImage.Width, currentImage.Height);
-
-            for (int x = 1; x < currentImage.Width - 1; x++)
-            {
-                for (int y = 1; y < currentImage.Height - 1; y++)
-                {
-                    int r = 0, g = 0, b = 0;
-                    int count = 0;
-
-                    for (int i = -1; i <= 1; i++)
-                    {
-                        for (int j = -1; j <= 1; j++)
-                        {
-                            Color pixel = currentImage.GetPixel(x + i, y + j);
-                            r += pixel.R;
-                            g += pixel.G;
-                            b += pixel.B;
-                            count++;
-                        }
-                    }
-
-                    r /= count;
-                    g /= count;
-                    b /= count;
-
-                    blurred.SetPixel(x, y, Color.FromArgb(r, g, b));
-                }
-            }
-
-            currentImage = blurred;
-            pictureBox1.Image = currentImage;
         }
 
         private void BlurFilter_Click(object sender, EventArgs e)
@@ -256,7 +227,8 @@ namespace ImageEditor
             if (currentImage == null) return;
 
             SaveCurrentState();
-            ApplyBlur();
+            currentImage = ImageProcessor.ApplyGaussianBlur(currentImage);
+            UpdateImageDisplay();
         }
 
         private void ApplySepia()
@@ -284,7 +256,7 @@ namespace ImageEditor
             }
 
             currentImage = tempImage;
-            pictureBox1.Image = currentImage;
+            UpdateImageDisplay();
         }
 
         private void SepiaFilter_Click(object sender, EventArgs e)
@@ -311,7 +283,7 @@ namespace ImageEditor
             }
 
             currentImage = tempImage;
-            pictureBox1.Image = currentImage;
+            UpdateImageDisplay();
         }
 
         private void InvertFilter_Click(object sender, EventArgs e)
@@ -339,7 +311,7 @@ namespace ImageEditor
             }
 
             currentImage = tempImage;
-            pictureBox1.Image = currentImage;
+            UpdateImageDisplay();
         }
 
         private void GrayscaleFilter_Click(object sender, EventArgs e)
@@ -348,6 +320,113 @@ namespace ImageEditor
 
             SaveCurrentState();
             ApplyGrayscale();
+        }
+
+        // Drawing and Zooming Methods
+        private void EnablePencil()
+        {
+            currentTool = "Pencil";
+            isEraser = false;
+            UpdateStatusBar();
+        }
+
+        private void EnableEraser()
+        {
+            currentTool = "Pencil";
+            isEraser = true;
+            UpdateStatusBar();
+        }
+
+        private void ChangeColor()
+        {
+            using (ColorDialog colorDialog = new ColorDialog())
+            {
+                colorDialog.Color = drawingColor;
+                if (colorDialog.ShowDialog() == DialogResult.OK)
+                {
+                    drawingColor = colorDialog.Color;
+                    UpdateStatusBar();
+                }
+            }
+        }
+
+        private void IncreasePenSize()
+        {
+            penWidth = Math.Min(50, penWidth + 1);
+            UpdateStatusBar();
+        }
+
+        private void DecreasePenSize()
+        {
+            penWidth = Math.Max(1, penWidth - 1);
+            UpdateStatusBar();
+        }
+
+        private void ZoomIn()
+        {
+            zoomFactor *= 1.2f;
+            if (zoomFactor > 5.0f) zoomFactor = 5.0f;
+            UpdateImageDisplay();
+            UpdateStatusBar();
+        }
+
+        private void ZoomOut()
+        {
+            zoomFactor /= 1.2f;
+            if (zoomFactor < 0.1f) zoomFactor = 0.1f;
+            UpdateImageDisplay();
+            UpdateStatusBar();
+        }
+
+        private void ResetZoom()
+        {
+            zoomFactor = 1.0f;
+            panOffset = Point.Empty;
+            UpdateImageDisplay();
+            UpdateStatusBar();
+        }
+
+        private void UpdateImageDisplay()
+        {
+            if (currentImage == null) return;
+
+            if (Math.Abs(zoomFactor - 1.0f) < 0.01f)
+            {
+                pictureBox1.Image = currentImage;
+                pictureBox1.Size = currentImage.Size;
+            }
+            else
+            {
+                int newWidth = (int)(currentImage.Width * zoomFactor);
+                int newHeight = (int)(currentImage.Height * zoomFactor);
+
+                Bitmap scaledImage = new Bitmap(newWidth, newHeight);
+                using (Graphics g = Graphics.FromImage(scaledImage))
+                {
+                    g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                    g.DrawImage(currentImage, 0, 0, newWidth, newHeight);
+                }
+                pictureBox1.Image = scaledImage;
+                pictureBox1.Size = scaledImage.Size;
+            }
+            pictureBox1.Invalidate();
+        }
+
+        private Point ConvertMouseCoordinates(Point mousePos)
+        {
+            if (currentImage == null || pictureBox1.Image == null)
+                return mousePos;
+
+            float scaleX = (float)currentImage.Width / pictureBox1.Image.Width;
+            float scaleY = (float)currentImage.Height / pictureBox1.Image.Height;
+
+            int x = (int)(mousePos.X * scaleX);
+            int y = (int)(mousePos.Y * scaleY);
+
+            x = Math.Max(0, Math.Min(currentImage.Width - 1, x));
+            y = Math.Max(0, Math.Min(currentImage.Height - 1, y));
+
+            return new Point(x, y);
         }
 
         private void pictureBox1_MouseDown(object sender, MouseEventArgs e)
@@ -363,9 +442,15 @@ namespace ImageEditor
                 else if (currentTool == "Pencil")
                 {
                     isDrawing = true;
-                    previousPoint = e.Location;
+                    previousPoint = ConvertMouseCoordinates(e.Location);
                     SaveCurrentState();
                 }
+            }
+            else if (e.Button == MouseButtons.Middle)
+            {
+                isPanning = true;
+                panStart = e.Location;
+                pictureBox1.Cursor = Cursors.SizeAll;
             }
         }
 
@@ -373,7 +458,19 @@ namespace ImageEditor
         {
             if (currentImage == null) return;
 
-            if (currentTool == "Crop" && e.Button == MouseButtons.Left)
+            if (isPanning && e.Button == MouseButtons.Middle)
+            {
+                int deltaX = e.X - panStart.X;
+                int deltaY = e.Y - panStart.Y;
+
+                // Update scroll position
+                panel1.AutoScrollPosition = new Point(
+                    -panel1.AutoScrollPosition.X - deltaX,
+                    -panel1.AutoScrollPosition.Y - deltaY);
+
+                panStart = e.Location;
+            }
+            else if (currentTool == "Crop" && e.Button == MouseButtons.Left)
             {
                 int x = Math.Min(cropRectangle.X, e.X);
                 int y = Math.Min(cropRectangle.Y, e.Y);
@@ -385,22 +482,34 @@ namespace ImageEditor
             }
             else if (currentTool == "Pencil" && isDrawing && e.Button == MouseButtons.Left)
             {
+                Point currentPoint = ConvertMouseCoordinates(e.Location);
+
                 using (Graphics g = Graphics.FromImage(currentImage))
                 {
-                    using (Pen pen = new Pen(drawingColor, penWidth))
+                    Color drawColor = isEraser ? Color.White : drawingColor;
+                    using (Pen pen = new Pen(drawColor, penWidth))
                     {
-                        g.DrawLine(pen, previousPoint, e.Location);
+                        pen.StartCap = LineCap.Round;
+                        pen.EndCap = LineCap.Round;
+                        g.SmoothingMode = SmoothingMode.AntiAlias;
+                        g.DrawLine(pen, previousPoint, currentPoint);
                     }
                 }
 
-                previousPoint = e.Location;
-                pictureBox1.Invalidate();
+                previousPoint = currentPoint;
+                UpdateImageDisplay();
             }
         }
 
         private void pictureBox1_MouseUp(object sender, MouseEventArgs e)
         {
             isDrawing = false;
+
+            if (e.Button == MouseButtons.Middle)
+            {
+                isPanning = false;
+                pictureBox1.Cursor = Cursors.Default;
+            }
 
             if (currentTool == "Crop" && !cropRectangle.IsEmpty && cropRectangle.Width > 0 && cropRectangle.Height > 0)
             {
@@ -409,21 +518,63 @@ namespace ImageEditor
             }
         }
 
+        private void pictureBox1_MouseWheel(object sender, MouseEventArgs e)
+        {
+            if (ModifierKeys == Keys.Control)
+            {
+                if (e.Delta > 0)
+                    ZoomIn();
+                else
+                    ZoomOut();
+            }
+        }
+
         private void ApplyCrop()
         {
             if (cropRectangle.Width > 0 && cropRectangle.Height > 0)
             {
-                Bitmap cropped = new Bitmap(cropRectangle.Width, cropRectangle.Height);
-                using (Graphics g = Graphics.FromImage(cropped))
+                try
                 {
-                    g.DrawImage(currentImage, new Rectangle(0, 0, cropped.Width, cropped.Height),
-                               cropRectangle, GraphicsUnit.Pixel);
+                    // Получаем реальные координаты на исходном изображении
+                    Point sourceLocation = ConvertMouseCoordinates(cropRectangle.Location);
+
+                    // Вычисляем реальные размеры области обрезки
+                    float scaleX = (float)currentImage.Width / pictureBox1.Image.Width;
+                    float scaleY = (float)currentImage.Height / pictureBox1.Image.Height;
+
+                    int sourceWidth = (int)(cropRectangle.Width * scaleX);
+                    int sourceHeight = (int)(cropRectangle.Height * scaleY);
+
+                    // Ограничиваем размеры областью изображения
+                    sourceWidth = Math.Min(sourceWidth, currentImage.Width - sourceLocation.X);
+                    sourceHeight = Math.Min(sourceHeight, currentImage.Height - sourceLocation.Y);
+
+                    if (sourceWidth > 0 && sourceHeight > 0)
+                    {
+                        // Создаем прямоугольник для обрезки
+                        Rectangle sourceRect = new Rectangle(sourceLocation.X, sourceLocation.Y, sourceWidth, sourceHeight);
+
+                        Bitmap cropped = new Bitmap(sourceRect.Width, sourceRect.Height);
+                        using (Graphics g = Graphics.FromImage(cropped))
+                        {
+                            g.DrawImage(currentImage, new Rectangle(0, 0, cropped.Width, cropped.Height),
+                                       sourceRect, GraphicsUnit.Pixel);
+                        }
+
+                        currentImage = cropped;
+                        cropRectangle = Rectangle.Empty;
+                        zoomFactor = 1.0f;
+                        panOffset = Point.Empty;
+                        UpdateImageDisplay();
+                        currentTool = "Pencil";
+                        UpdateStatusBar();
+                    }
                 }
-                currentImage = cropped;
-                cropRectangle = Rectangle.Empty;
-                pictureBox1.Image = currentImage;
-                pictureBox1.Size = currentImage.Size;
-                currentTool = "Pencil";
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error during crop: {ex.Message}", "Crop Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
 
@@ -445,6 +596,42 @@ namespace ImageEditor
             {
                 Undo_Click(sender, e);
             }
+            else if (e.Control && e.KeyCode == Keys.Y)
+            {
+                Redo_Click(sender, e);
+            }
+            else if (e.KeyCode == Keys.P)
+            {
+                EnablePencil();
+            }
+            else if (e.KeyCode == Keys.E)
+            {
+                EnableEraser();
+            }
+            else if (e.Control && e.KeyCode == Keys.Add)
+            {
+                ZoomIn();
+            }
+            else if (e.Control && e.KeyCode == Keys.Subtract)
+            {
+                ZoomOut();
+            }
+            else if (e.Control && e.KeyCode == Keys.D0)
+            {
+                ResetZoom();
+            }
+            else if (e.Control && e.KeyCode == Keys.C)
+            {
+                ChangeColor();
+            }
+            else if (e.KeyCode == Keys.Oemplus)
+            {
+                IncreasePenSize();
+            }
+            else if (e.KeyCode == Keys.OemMinus)
+            {
+                DecreasePenSize();
+            }
         }
 
         private void toolStripButton1_Click(object sender, EventArgs e)
@@ -452,9 +639,45 @@ namespace ImageEditor
             OpenFile_Click(sender, e);
         }
 
-        private void toolStripButton2_Click(object sender, EventArgs e)
+        // Menu item handlers for new drawing tools
+        private void PencilTool_Click(object sender, EventArgs e)
         {
-            SaveFile_Click(sender, e);
+            EnablePencil();
+        }
+
+        private void EraserTool_Click(object sender, EventArgs e)
+        {
+            EnableEraser();
+        }
+
+        private void ColorTool_Click(object sender, EventArgs e)
+        {
+            ChangeColor();
+        }
+
+        private void IncreasePenTool_Click(object sender, EventArgs e)
+        {
+            IncreasePenSize();
+        }
+
+        private void DecreasePenTool_Click(object sender, EventArgs e)
+        {
+            DecreasePenSize();
+        }
+
+        private void ZoomInTool_Click(object sender, EventArgs e)
+        {
+            ZoomIn();
+        }
+
+        private void ZoomOutTool_Click(object sender, EventArgs e)
+        {
+            ZoomOut();
+        }
+
+        private void ResetZoomTool_Click(object sender, EventArgs e)
+        {
+            ResetZoom();
         }
     }
 }
