@@ -14,7 +14,6 @@ namespace To_do_List__Простой_
         private DateTime[] taskCreated = new DateTime[5];
         private DateTime?[] taskCompletedDate = new DateTime?[5];
 
-        // Массивы для хранения ссылок на кнопки
         private Button[] okButtons;
         private Button[] editButtons;
         private TextBox[] taskTextBoxes;
@@ -25,59 +24,99 @@ namespace To_do_List__Простой_
         private Label[] timeLabels;
         private Label[] readLabels;
 
-        // Путь к файлу сохранения
         private string saveFilePath = "tasks.json";
 
-        // Разрешение окна
-        private Size formSize = new Size(1200, 800); // Увеличим размер окна
-
-        // Цвета для стилизации
         private Color primaryColor = Color.FromArgb(41, 128, 185);
         private Color secondaryColor = Color.FromArgb(52, 152, 219);
         private Color accentColor = Color.FromArgb(46, 204, 113);
         private Color dangerColor = Color.FromArgb(231, 76, 60);
         private Color backgroundColor = Color.FromArgb(236, 240, 241);
 
+        private TableLayoutPanel mainLayout;
+
         public Form1()
         {
             InitializeComponent();
             InitializeArrays();
-            SetFormResolution();
-            ApplyStyling(); // Применяем стилизацию
+            SetupMainLayout();
+            ApplyStyling();
             LoadTasks();
             InitializeTimer();
             InitializeEventHandlers();
             InitializeButtonsVisibility();
-            SetupAutoScale();
         }
 
-        // Применение стилей
+        private void SetupMainLayout()
+        {
+            this.AutoScaleMode = AutoScaleMode.Dpi;
+            this.AutoSize = false;
+            this.MinimumSize = new Size(900, 650);
+            this.StartPosition = FormStartPosition.CenterScreen;
+            this.Text = "To-Do List";
+            this.Padding = new Padding(20);
+
+            mainLayout = new TableLayoutPanel();
+            mainLayout.Dock = DockStyle.Fill;
+            mainLayout.ColumnCount = 2;
+            mainLayout.RowCount = 7;
+            mainLayout.Padding = new Padding(10);
+
+            mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 75F));
+            mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 100));
+            for (int i = 0; i < 5; i++)
+            {
+                mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            }
+
+            this.Controls.Add(mainLayout);
+
+            label1.TextAlign = ContentAlignment.MiddleCenter;
+            mainLayout.Controls.Add(label1, 0, 0);
+            mainLayout.SetColumnSpan(label1, 2);
+
+            mainLayout.Controls.Add(panel0, 0, 1);
+            mainLayout.SetColumnSpan(panel0, 2);
+
+            for (int i = 0; i < 5; i++)
+            {
+                mainLayout.Controls.Add(taskPanels[i], 0, i + 2);
+
+                Panel sidePanel = new Panel();
+                sidePanel.Dock = DockStyle.Fill;
+                sidePanel.Controls.Add(readLabels[i]);
+                sidePanel.Controls.Add(timePanels[i]);
+
+                readLabels[i].Dock = DockStyle.Top;
+                readLabels[i].Height = 25;
+                timePanels[i].Dock = DockStyle.Bottom;
+                timePanels[i].Height = 25;
+
+                mainLayout.Controls.Add(sidePanel, 1, i + 2);
+            }
+        }
+
         private void ApplyStyling()
         {
-            // Устанавливаем цвет фона формы
             this.BackColor = backgroundColor;
 
-            // Стилизуем заголовок
             label1.ForeColor = primaryColor;
             label1.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
 
-            // Стилизуем основную панель
             panel0.BackColor = Color.White;
             panel0.BorderStyle = BorderStyle.FixedSingle;
 
-            // Стилизуем кнопку добавления
             button1.BackColor = accentColor;
             button1.ForeColor = Color.White;
             button1.FlatStyle = FlatStyle.Flat;
             button1.FlatAppearance.BorderSize = 0;
             button1.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            button1.Size = new Size(140, 55);
 
-            // Стилизуем текстовое поле
             textNewTask.BorderStyle = BorderStyle.FixedSingle;
             textNewTask.BackColor = Color.White;
 
-            // Стилизуем панели задач
             foreach (var panel in taskPanels)
             {
                 if (panel != null)
@@ -87,14 +126,11 @@ namespace To_do_List__Простой_
                 }
             }
 
-            // Стилизуем кнопки
             StyleButtons();
         }
 
-        // Стилизация кнопок
         private void StyleButtons()
         {
-            // Стили для кнопок редактирования
             foreach (var button in editButtons)
             {
                 button.BackColor = secondaryColor;
@@ -102,11 +138,8 @@ namespace To_do_List__Простой_
                 button.FlatStyle = FlatStyle.Flat;
                 button.FlatAppearance.BorderSize = 0;
                 button.Font = new Font("Segoe UI", 9F);
-                button.Size = new Size(120, 35);
-                button.Margin = new Padding(5);
             }
 
-            // Стили для кнопок OK
             foreach (var button in okButtons)
             {
                 button.BackColor = accentColor;
@@ -114,11 +147,8 @@ namespace To_do_List__Простой_
                 button.FlatStyle = FlatStyle.Flat;
                 button.FlatAppearance.BorderSize = 0;
                 button.Font = new Font("Segoe UI", 9F);
-                button.Size = new Size(100, 35);
-                button.Margin = new Padding(5);
             }
 
-            // Стили для кнопок "Готово"
             foreach (var button in doneButtons)
             {
                 button.BackColor = accentColor;
@@ -126,11 +156,8 @@ namespace To_do_List__Простой_
                 button.FlatStyle = FlatStyle.Flat;
                 button.FlatAppearance.BorderSize = 0;
                 button.Font = new Font("Segoe UI", 9F);
-                button.Size = new Size(100, 35);
-                button.Margin = new Padding(5);
             }
 
-            // Стили для кнопок удаления
             foreach (var button in deleteButtons)
             {
                 button.BackColor = dangerColor;
@@ -138,128 +165,23 @@ namespace To_do_List__Простой_
                 button.FlatStyle = FlatStyle.Flat;
                 button.FlatAppearance.BorderSize = 0;
                 button.Font = new Font("Segoe UI", 9F);
-                button.Size = new Size(100, 35);
-                button.Margin = new Padding(5);
-            }
-        }
-
-        // Установка разрешения формы
-        private void SetFormResolution()
-        {
-            this.Size = formSize;
-            this.MinimumSize = formSize;
-            this.MaximumSize = formSize;
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.Text = "To-Do List - " + formSize.Width + "x" + formSize.Height;
-        }
-
-        // Настройка автоматического масштабирования
-        private void SetupAutoScale()
-        {
-            this.AutoScaleMode = AutoScaleMode.Font;
-            this.AutoSize = false;
-            this.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-
-            // Устанавливаем якоря для основных элементов
-            SetAnchorsForControls();
-        }
-
-        // Установка якорей для элементов управления
-        private void SetAnchorsForControls()
-        {
-            // Основные элементы - привязываем к верхнему левому углу
-            textNewTask.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            button1.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-
-            // Панели задач - привязываем к верхнему левому углу и растягиваем по ширине
-            for (int i = 0; i < 5; i++)
-            {
-                if (taskPanels[i] != null)
-                {
-                    taskPanels[i].Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-                }
-
-                if (taskTextBoxes[i] != null)
-                {
-                    taskTextBoxes[i].Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-                }
-
-                if (timePanels[i] != null)
-                {
-                    timePanels[i].Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-                }
-            }
-
-            // Устанавливаем фиксированные размеры для кнопок с отступами
-            foreach (var button in okButtons)
-            {
-                button.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-                button.Size = new Size(100, 35);
-                button.Margin = new Padding(5);
-            }
-
-            foreach (var button in editButtons)
-            {
-                button.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-                button.Size = new Size(120, 35);
-                button.Margin = new Padding(5);
-            }
-
-            foreach (var button in doneButtons)
-            {
-                button.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-                button.Size = new Size(100, 35);
-                button.Margin = new Padding(5);
-            }
-
-            foreach (var button in deleteButtons)
-            {
-                button.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-                button.Size = new Size(100, 35);
-                button.Margin = new Padding(5);
-            }
-
-            // Устанавливаем фиксированные размеры для текстовых полей
-            foreach (var textBox in taskTextBoxes)
-            {
-                textBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-                textBox.Size = new Size(400, 25);
-            }
-
-            // Устанавливаем фиксированные размеры для меток
-            for (int i = 0; i < 5; i++)
-            {
-                if (readLabels[i] != null)
-                {
-                    readLabels[i].Anchor = AnchorStyles.Top | AnchorStyles.Right;
-                    readLabels[i].Size = new Size(120, 20);
-                }
-
-                if (timeLabels[i] != null)
-                {
-                    timeLabels[i].Anchor = AnchorStyles.Top | AnchorStyles.Right;
-                    timeLabels[i].Size = new Size(150, 20);
-                }
             }
         }
 
         private void InitializeArrays()
         {
-            // Инициализируем массивы с ссылками на элементы управления
             okButtons = new Button[] { ok1, ok2, ok3, ok4, ok5 };
             editButtons = new Button[] { edit1, edit2, edit3, edit4, edit5 };
             taskTextBoxes = new TextBox[] { textBox1, textBox2, textBox3, textBox4, textBox5 };
             doneButtons = new Button[] { done1, done2, done3, done4, done5 };
             deleteButtons = new Button[] { delete1, delete2, delete3, delete4, delete5 };
 
-            // Инициализируем массивы для панелей и меток
             taskPanels = new Panel[] { panel1, panel2, panel3, panel4, panel5 };
             timePanels = new Panel[] { timePanel1, timePanel2, timePanel3, timePanel4, timePanel5 };
             timeLabels = new Label[] { timeLabel1, timeLabel2, timeLabel3, timeLabel4, timeLabel5 };
             readLabels = new Label[] { readLabel1, readLabel2, readLabel3, readLabel4, readLabel5 };
         }
 
-        // Метод для получения текстового поля задачи по индексу
         private TextBox GetTaskTextBox(int taskIndex)
         {
             if (taskIndex >= 0 && taskIndex < taskTextBoxes.Length)
@@ -269,7 +191,6 @@ namespace To_do_List__Простой_
             return null;
         }
 
-        // Метод для получения панели времени по номеру задачи
         private Panel GetTimePanel(int taskNumber)
         {
             int index = taskNumber - 1;
@@ -280,7 +201,6 @@ namespace To_do_List__Простой_
             return null;
         }
 
-        // Метод для получения метки времени по номеру задачи
         private Label GetTimeLabel(int taskNumber)
         {
             int index = taskNumber - 1;
@@ -291,7 +211,6 @@ namespace To_do_List__Простой_
             return null;
         }
 
-        // Метод для получения метки статуса прочтения по номеру задачи
         private Label GetReadLabel(int taskNumber)
         {
             int index = taskNumber - 1;
@@ -302,7 +221,6 @@ namespace To_do_List__Простой_
             return null;
         }
 
-        // Метод для получения панели задачи по номеру задачи
         private Panel GetTaskPanel(int taskNumber)
         {
             int index = taskNumber - 1;
@@ -333,18 +251,12 @@ namespace To_do_List__Простой_
         {
             for (int i = 0; i < 5; i++)
             {
-                // Кнопка "Готово" всегда скрыта изначально
                 okButtons[i].Visible = false;
-
-                // Кнопка "Редактировать" видна только если есть текст и задача не завершена
                 editButtons[i].Visible = !string.IsNullOrEmpty(taskTextBoxes[i].Text) && !taskCompleted[i];
-
-                // Кнопка "Готово" видна только если задача не завершена
                 doneButtons[i].Visible = !string.IsNullOrEmpty(taskTextBoxes[i].Text) && !taskCompleted[i];
             }
         }
 
-        // Класс для сохранения данных задачи
         public class SavedTask
         {
             public string Text { get; set; } = string.Empty;
@@ -357,7 +269,6 @@ namespace To_do_List__Простой_
             public bool DoneButtonVisible { get; set; } = true;
         }
 
-        // Сохранение задач в файл
         private void SaveTasks()
         {
             try
@@ -391,7 +302,6 @@ namespace To_do_List__Простой_
             }
         }
 
-        // Загрузка задач из файла
         private void LoadTasks()
         {
             try
@@ -415,7 +325,6 @@ namespace To_do_List__Простой_
                             editButtons[i].Visible = task.EditButtonVisible && !task.Completed;
                             doneButtons[i].Visible = task.DoneButtonVisible && !task.Completed;
 
-                            // Обновляем отображение для загруженных задач
                             if (!string.IsNullOrEmpty(task.Text))
                             {
                                 GetTaskPanel(i + 1).Visible = true;
@@ -443,7 +352,6 @@ namespace To_do_List__Простой_
             }
         }
 
-        // Сохранение при закрытии формы
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             base.OnFormClosing(e);
@@ -525,7 +433,6 @@ namespace To_do_List__Простой_
                     okButtons[i].Visible = false;
                     doneButtons[i].Visible = true;
 
-                    // Восстанавливаем стандартные стили для новой задачи
                     currentTextBox.BackColor = Color.White;
                     currentTextBox.ForeColor = Color.Black;
                     currentTextBox.Font = new Font(currentTextBox.Font, FontStyle.Regular);
@@ -589,12 +496,11 @@ namespace To_do_List__Простой_
                 readLabel.ForeColor = Color.Green;
             }
 
-            // Меняем стиль текстового поля для выполненной задачи
             if (taskTextBox != null)
             {
-                taskTextBox.BackColor = Color.FromArgb(240, 255, 240); // Светло-зеленый фон
-                taskTextBox.ForeColor = Color.DarkGreen; // Темно-зеленый текст
-                taskTextBox.Font = new Font(taskTextBox.Font, FontStyle.Strikeout); // Зачеркнутый текст
+                taskTextBox.BackColor = Color.FromArgb(240, 255, 240);
+                taskTextBox.ForeColor = Color.DarkGreen;
+                taskTextBox.Font = new Font(taskTextBox.Font, FontStyle.Strikeout);
             }
         }
 
@@ -605,10 +511,9 @@ namespace To_do_List__Простой_
             UpdateTimeDisplay(taskIndex + 1);
             UpdateCompleteDisplay(taskIndex + 1);
 
-            // Скрываем кнопки после выполнения
             editButtons[taskIndex].Visible = false;
             okButtons[taskIndex].Visible = false;
-            doneButtons[taskIndex].Visible = false; // Скрываем кнопку "Готово"
+            doneButtons[taskIndex].Visible = false;
 
             SaveTasks();
         }
@@ -655,7 +560,6 @@ namespace To_do_List__Простой_
             editButtons[4].Visible = false;
             doneButtons[4].Visible = false;
 
-            // Восстанавливаем стандартные стили для удаленной задачи
             taskTextBoxes[4].BackColor = Color.White;
             taskTextBoxes[4].ForeColor = Color.Black;
             taskTextBoxes[4].Font = new Font(taskTextBoxes[4].Font, FontStyle.Regular);
@@ -689,7 +593,6 @@ namespace To_do_List__Простой_
             okButtons[taskIndex].Visible = true;
             taskTextBoxes[taskIndex].ReadOnly = false;
 
-            // Возвращаем стандартные стили при редактировании
             taskTextBoxes[taskIndex].BackColor = Color.White;
             taskTextBoxes[taskIndex].ForeColor = Color.Black;
             taskTextBoxes[taskIndex].Font = new Font(taskTextBoxes[taskIndex].Font, FontStyle.Regular);
@@ -701,7 +604,6 @@ namespace To_do_List__Простой_
             editButtons[taskIndex].Visible = !taskCompleted[taskIndex];
             taskTextBoxes[taskIndex].ReadOnly = true;
 
-            // Если задача была завершена, применяем стиль завершенной задачи
             if (taskCompleted[taskIndex])
             {
                 UpdateCompleteDisplay(taskIndex + 1);
